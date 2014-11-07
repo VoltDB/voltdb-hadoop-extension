@@ -1,0 +1,49 @@
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2014 VoltDB Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'groovy'
+
+project.description = 'ValtDB Hadoop Integration'
+
+dependencies {
+    compile 'org.apache.hadoop:hadoop-client:2.3.0'
+    compile fileTree(dir: "${voltdbHome}/voltdb", include: 'voltdbclient*.jar')
+
+    testCompile 'org.spockframework:spock-core:1.0-groovy-2.3-SNAPSHOT'
+    testCompile 'org.hamcrest:hamcrest-core:1.3'
+    testCompile 'org.powermock:powermock-module-junit4:1.5.6'
+    testCompile 'org.powermock:powermock-module-junit4-rule:1.5.6'
+    testCompile 'org.powermock:powermock-classloading-xstream:1.5.6'
+    testCompile 'org.powermock:powermock-module-test-mockito-junit4:1.5.6'
+
+    testRuntime "cglib:cglib-nodep:3.1"          // allows mocking of classes (in addition to interfaces)
+    // testRuntime "org.objenesis:objenesis:2.1"    // allows mocking of classes without default constructor (together with CGLIB)
+}
+
+artifacts { 
+    runtime jar
+}
+
