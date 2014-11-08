@@ -26,6 +26,7 @@ package org.voltdb.pig;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -50,21 +51,19 @@ public class VoltStorer extends StoreFunc {
     private VoltConfiguration m_conf;
     private ResourceSchema m_schema;
     private TupleAdapter m_adapter;
+    private String [] m_hosts = new String[]{"locahost"};
+    private String m_user = null;
+    private String m_password = null;
+
     private RecordWriter<Text,VoltRecord> m_writer;
 
     public VoltStorer() {
-    }
-
-    @Override
-    public OutputFormat<Text,VoltRecord> getOutputFormat() throws IOException {
-        return new VoltOutputFormat();
     }
 
     /**
      * the location parameter is what is passed to the pig STORE command. It consists
      * of a small JSON document containing the the following attributes
      * <ul>
-     * <li>table: destination table name</li>
      * <li>servers: host names where the VoltDB cluster is running</li>
      * <li>user: [optional] database  user name</li>
      * <li>password: [optional] database user password</li>
@@ -75,23 +74,39 @@ public class VoltStorer extends StoreFunc {
      *     USING org.voltdb.pig.VoltStorer();
      * </code></pre>
      */
+    public VoltStorer(String...locs) {
+        if(locs.length >= 1) {
+            Location loc = null;
+            try {
+                loc = Location.fromJSON(locs[0]);
+            } catch (JSONException e) {
+                throw new IllegalArgumentException(e);
+            }
+            String [] servers = loc.getServers();
+            m_hosts =  servers != null && servers.length > 0 ? servers : m_hosts;
+            m_user = loc.getUser();
+            m_password = loc.getPassword();
+        }
+    }
+
+    @Override
+    public OutputFormat<Text,VoltRecord> getOutputFormat() throws IOException {
+        return new VoltOutputFormat();
+    }
+
     @Override
     public void setStoreLocation(String loc, Job job) throws IOException {
-        Location location = null;
-        try {
-            location = Location.fromJSON(loc);
-        } catch (JSONException e) {
-            throw new IOException("location specification error",e);
-        }
+
         VoltConfiguration.configureVoltDB(
-                job.getConfiguration(),
-                location.getServers(),
-                location.getUser(),
-                location.getPassword(),
-                location.getTable()
+                job.getConfiguration(), m_hosts, m_user, m_password, loc
                 );
         m_conf = new VoltConfiguration(job.getConfiguration());
         m_conf.isMinimallyConfigured();
+    }
+
+    @Override
+    public String relToAbsPathForStoreLocation(String location, Path curDir) throws IOException {
+        return location;
     }
 
     @SuppressWarnings({"unchecked","rawtypes"})
@@ -122,7 +137,6 @@ public class VoltStorer extends StoreFunc {
 
     public static class Location {
         private final String [] servers;
-        private final String table;
         private final String user;
         private final String password;
 
@@ -137,23 +151,18 @@ public class VoltStorer extends StoreFunc {
 
             return new Location(
                     servers,
-                    json.getString("table"),
                     json.optString("user", null),
                     json.optString("password", null)
                     );
         }
 
-        public Location(String[] servers, String table, String user, String password) {
+        public Location(String[] servers, String user, String password) {
             this.servers = servers;
-            this.table = table;
             this.user = user;
             this.password = password;
         }
         public String[] getServers() {
             return servers;
-        }
-        public String getTable() {
-            return table;
         }
         public String getUser() {
             return user;
