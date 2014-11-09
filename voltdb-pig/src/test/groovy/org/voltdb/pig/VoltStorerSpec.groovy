@@ -24,28 +24,25 @@
 
 package org.voltdb.pig
 
-import groovy.lang.Closure;
-
-import java.util.List;
-
-import spock.lang.Specification
+import static org.voltdb.VoltType.*
 
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.io.Text
 import org.apache.hadoop.mapreduce.Job
 import org.apache.hadoop.mapreduce.RecordWriter
-import org.apache.hadoop.io.Text
 import org.apache.pig.ResourceSchema
+import org.apache.pig.data.DataByteArray
 import org.apache.pig.data.DataType
 import org.apache.pig.data.Tuple
 import org.apache.pig.data.TupleFactory
-import org.apache.pig.data.DataByteArray
+import org.apache.pig.impl.util.UDFContext
+import org.joda.time.DateTime
 import org.voltdb.VoltType
 import org.voltdb.hadoop.DataAdapters
 import org.voltdb.hadoop.VoltConfiguration
 import org.voltdb.hadoop.VoltRecord
-import org.joda.time.DateTime
 
-import static org.voltdb.VoltType.*
+import spock.lang.Specification
 
 class VoltStorerSpec extends Specification {
 
@@ -67,15 +64,22 @@ class VoltStorerSpec extends Specification {
         field name: 'yfield', type: DataType.BYTEARRAY
     }
 
+    Properties udfProperties = new Properties()
+
     Configuration conf = Mock()
     Job job = Mock()
     RecordWriter writer = Mock()
+    UDFContext udfContext = Mock()
+    VoltStorer voltStorer = Spy(VoltStorer.class, constructorArgs: ['{"servers":["uno","due"]}'])
 
     def setup() {
         conf.get(VoltConfiguration.TABLENAME_PROP) >> THINGS
         conf.getStrings(VoltConfiguration.HOSTNAMES_PROP, _ as String[]) >> {['uno','due'] as String[]}
         conf.getStrings(VoltConfiguration.TMPJARS_PROP, _ as String[]) >> {[] as String []}
         job.getConfiguration() >> conf
+        udfContext.getUDFProperties(*_) >> udfProperties
+        voltStorer.getUDFContext() >> udfContext
+        voltStorer.checkSchema(schema)
     }
 
     def "make sure that the configuration mock works"() {
@@ -88,36 +92,28 @@ class VoltStorerSpec extends Specification {
     }
 
     def "setStoreLocation interacts with the job configuration"() {
-        given:
-            def vs = new VoltStorer()
         when:
-            vs.setStoreLocation('{"table":"THINGS","servers":["uno","due"]}', job)
+            voltStorer.setStoreLocation('THINGS', job)
         then:
             1 * conf.set(VoltConfiguration.TABLENAME_PROP, THINGS)
             1 * conf.setStrings(VoltConfiguration.HOSTNAMES_PROP, ['uno','due'] as String[])
     }
 
     def "sets up the tuple adapter as expected"() {
-        given:
-            def vs = new VoltStorer()
         when:
-            vs.checkSchema(schema)
-            vs.setStoreLocation('{"table":"THINGS","servers":["uno","due"]}', job)
+            voltStorer.setStoreLocation('THINGS', job)
         and:
-            vs.prepareToWrite(writer)
+            voltStorer.prepareToWrite(writer)
         then:
             notThrown(IOException)
     }
 
     def "writes volt records from adapted pig tuples"() {
         given:
-            def vs = new VoltStorer()
-        and:
-            vs.checkSchema(schema)
-            vs.setStoreLocation('{"table":"THINGS","servers":["uno","due"]}', job)
-            vs.prepareToWrite(writer)
+            voltStorer.setStoreLocation('THINGS', job)
+            voltStorer.prepareToWrite(writer)
         when:
-            vs.putNext(tuple(pigTuple))
+            voltStorer.putNext(tuple(pigTuple))
         then:
             1 * writer.write(_ as Text, {VoltRecord vr ->
                 vr.eachWithIndex {v,i -> assert v == expected[i]}
