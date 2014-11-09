@@ -114,7 +114,9 @@ public class VoltConfiguration {
             conf.set(PASSWORD_PROP, password);
         }
         conf.set(TABLENAME_PROP, tableName);
+    }
 
+    public static void loadVoltClientJar(Configuration conf) {
         String voltJar = ClientImpl.class
                 .getProtectionDomain()
                 .getCodeSource()

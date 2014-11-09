@@ -25,6 +25,7 @@
 package org.voltdb.pig;
 
 import java.io.IOException;
+import java.util.Properties;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
@@ -34,6 +35,8 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.pig.ResourceSchema;
 import org.apache.pig.StoreFunc;
 import org.apache.pig.data.Tuple;
+import org.apache.pig.impl.util.UDFContext;
+import org.apache.pig.impl.util.Utils;
 import org.json_voltpatches.JSONArray;
 import org.json_voltpatches.JSONException;
 import org.json_voltpatches.JSONObject;
@@ -47,13 +50,15 @@ import org.voltdb.hadoop.typeto.IncompatibleException;
  * table
  */
 public class VoltStorer extends StoreFunc {
+    private static final String SCHEMA_SIGNATURE = "org.voltdb.pig.schema";
 
     private VoltConfiguration m_conf;
-    private ResourceSchema m_schema;
-    private TupleAdapter m_adapter;
+    private ResourceSchema m_schema = null;
+    private TupleAdapter m_adapter = null;
     private String [] m_hosts = new String[]{"locahost"};
     private String m_user = null;
     private String m_password = null;
+    private String m_udfcSignature = null;
 
     private RecordWriter<Text,VoltRecord> m_writer;
 
@@ -70,8 +75,8 @@ public class VoltStorer extends StoreFunc {
      * </ul>
      * <p>For example:
      * <pre><code>
-     * STORE stream INTO '{"table":"DESTINATION","servers":["host1","host2"]}'
-     *     USING org.voltdb.pig.VoltStorer();
+     * STORE stream INTO 'LOADME'
+     *     USING org.voltdb.pig.VoltStorer("servers":["host1","host2"]}');
      * </code></pre>
      */
     public VoltStorer(String...locs) {
@@ -112,6 +117,18 @@ public class VoltStorer extends StoreFunc {
     @SuppressWarnings({"unchecked","rawtypes"})
     @Override
     public void prepareToWrite(RecordWriter writer) throws IOException {
+        // Get the schema string from the UDFContext object.
+        UDFContext udfc = getUDFContext();
+        Properties p =
+            udfc.getUDFProperties(this.getClass(), new String[]{m_udfcSignature});
+        String strSchema = p.getProperty(SCHEMA_SIGNATURE);
+        if (strSchema == null) {
+            throw new IOException("Could not find schema in UDF context");
+        }
+
+        // Parse the schema from the string stored in the properties object.
+        m_schema = new ResourceSchema(Utils.getSchemaFromString(strSchema));
+
         try {
             m_adapter = new TupleAdapter(m_schema, m_conf.getTableColumnTypes());
         } catch (IncompatibleException e) {
@@ -131,8 +148,22 @@ public class VoltStorer extends StoreFunc {
     }
 
     @Override
+    public void setStoreFuncUDFContextSignature(String signature) {
+        // store the signature so we can use it later
+        m_udfcSignature = signature;
+    }
+
+    @Override
     public void checkSchema(ResourceSchema s) throws IOException {
-        m_schema = s;
+        UDFContext udfc = getUDFContext();
+        Properties p =
+            udfc.getUDFProperties(this.getClass(), new String[]{m_udfcSignature});
+        p.setProperty(SCHEMA_SIGNATURE, s.toString());
+        m_schema = s; // for front end/mocking purposes
+    }
+
+    UDFContext getUDFContext() {
+        return UDFContext.getUDFContext();
     }
 
     public static class Location {

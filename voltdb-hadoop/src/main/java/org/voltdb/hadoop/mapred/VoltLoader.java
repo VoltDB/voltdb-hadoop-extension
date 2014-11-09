@@ -76,6 +76,7 @@ public class VoltLoader {
 
         JobClient client = new JobClient();
         JobConf conf = new LoaderOpts(args).configure(new JobConf(VoltLoader.class));
+        VoltConfiguration.loadVoltClientJar(conf);
 
         conf.setOutputKeyClass(Text.class);
         conf.setOutputValueClass(VoltRecord.class);
