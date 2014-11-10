@@ -9,7 +9,7 @@ REGISTER 'voltdb-hadoop-*.jar'
 REGISTER 'voltdbclient*.jar'
 
 STORE data_stream INTO 'VOLT_TABLE' 
-  using org.voldb.pig.VoltStorer('{"servers":["host1","host2"]}')
+  using org.voldb.pig.VoltStorer('{"servers":["host1","host2"]}');
 ```
 
 The VoltStorer constructor takes the a JSON document with the following fields
