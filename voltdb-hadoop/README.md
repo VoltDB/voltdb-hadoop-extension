@@ -18,5 +18,5 @@ To execute the job enter the following commands
 ```bash
 # VOLDB_HOME is set to the location where VoltDB is installed
 $ export HADOOP_CLASSPATH="voltdb-hadoop-1.0-SNAPSHOT.jar:${VOLTDB_HOME}/voltdb/voltdbclient-4.9.jar"
-$ hadoop jar org.voltdb.mapred.VoltLoader /hdfs/file/loadfrom.tsv LOAD_TO_TABLE --servers HOST1,HOST2
+$ hadoop org.voltdb.hadoop.mapred.VoltLoader /hdfs/file/loadfrom.tsv LOAD_TO_TABLE --servers HOST1,HOST2
 ```
