@@ -1,6 +1,7 @@
 VoltDB Hadoop Extension
 =======================
-This repository contains implementations of the VoltDB Hadoop OutputFormat, along side two its implementations:
+This repository contains implementations of the VoltDB Hadoop OutputFormat, along side two of its 
+implementations:
 
 * A VoltLoader hadoop job that loads a TSV file in HDFS into a VoltDB table
 * A Pig StoreFunc implementation that can be used to load a Pig data flow into a VoltDB table
