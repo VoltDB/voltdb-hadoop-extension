@@ -1,7 +1,6 @@
 VoltDB Pig Connector
 ====================
-This module contains the inplementation of a Pig store function for VoltDB. The store funtion takes a Pig data stream, 
-and loads it into a VoltDB table
+This module contains the implementation of a Pig store function for VoltDB. The store funtion takes a Pig data stream, and loads it into a VoltDB table
 
 ```pig
 REGISTER 'voltdb-pig-*.jar'
