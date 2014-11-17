@@ -4,7 +4,8 @@ This repository contains implementations of the VoltDB Hadoop OutputFormat, alon
 implementations:
 
 * A VoltLoader hadoop job that loads a TSV file in HDFS into a VoltDB table
-* A Pig StoreFunc implementation that can be used to load a Pig data flow into a VoltDB table
+* A Pig `StoreFunc` implementation that can be used to load a Pig data flow into a VoltDB table
+* A Hive `SorageHandler` implementation that allows Hive insert operations to write to VoltDB tables
 
 ## Build Instuctions
 Copy the gradle.properties-template file in voltdb-hadoop to voltdb-hadoop/gradle.properties
@@ -17,7 +18,7 @@ Build by invoking the gradlew script
 ```bash
 $ ./gradlew jar
 ```
-this builds jar artifacts in `voltb-{hadoop,pig}/build/libs/`
+this builds jar artifacts in `voltb-{hadoop,hive,pig}/build/libs/`
 
 Invoke gradlew as follows for more information on what other build tasks are available
 ```bash
