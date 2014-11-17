@@ -13,6 +13,6 @@ STORE data_stream INTO 'VOLT_TABLE'
 ```
 
 The VoltStorer constructor takes the a JSON document with the following fields
-* servers: an array host names where a VoltDB cluster is running
-* user: a volt user name
-* password: a volt user password
+* `servers`: an array host names where a VoltDB cluster is running
+* `user`: a volt user name
+* `password`: a volt user password
