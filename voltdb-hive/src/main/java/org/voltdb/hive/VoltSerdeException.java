@@ -22,26 +22,27 @@
  * THE SOFTWARE.
  */
 
-apply plugin: 'java'
-apply plugin: 'eclipse'
-apply plugin: 'groovy'
+package org.voltdb.hive;
 
-project.description = 'ValtDB Pig Integration'
+import org.apache.hadoop.hive.serde2.SerDeException;
 
-sourceCompatibility = 1.6
-targetCompatibility = 1.6
+public class VoltSerdeException extends SerDeException {
 
-dependencies {
-    compile  project(path: ':voltdb-hadoop')
-    compile 'org.apache.pig:pig:0.13.0'
+    private static final long serialVersionUID = 5837394515987837570L;
 
-    testCompile 'org.spockframework:spock-core:1.0-groovy-2.3-SNAPSHOT'
-    testCompile 'org.hamcrest:hamcrest-core:1.3'
-    testRuntime "cglib:cglib-nodep:3.1"
-    testRuntime "org.objenesis:objenesis:2.1"
+    public VoltSerdeException() {
+    }
+
+    public VoltSerdeException(String message) {
+        super(message);
+    }
+
+    public VoltSerdeException(Throwable cause) {
+        super(cause);
+    }
+
+    public VoltSerdeException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
 }
-
-artifacts { 
-    runtime jar
-}
-

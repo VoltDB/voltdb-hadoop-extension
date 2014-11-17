@@ -28,6 +28,9 @@ apply plugin: 'groovy'
 
 project.description = 'ValtDB Hadoop Integration'
 
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
 dependencies {
     compile 'org.apache.hadoop:hadoop-client:2.3.0'
     compile fileTree(dir: "${voltdbHome}/voltdb", include: 'voltdbclient*.jar')

@@ -75,7 +75,6 @@ class VoltStorerSpec extends Specification {
     def setup() {
         conf.get(VoltConfiguration.TABLENAME_PROP) >> THINGS
         conf.getStrings(VoltConfiguration.HOSTNAMES_PROP, _ as String[]) >> {['uno','due'] as String[]}
-        conf.getStrings(VoltConfiguration.TMPJARS_PROP, _ as String[]) >> {[] as String []}
         job.getConfiguration() >> conf
         udfContext.getUDFProperties(*_) >> udfProperties
         voltStorer.getUDFContext() >> udfContext

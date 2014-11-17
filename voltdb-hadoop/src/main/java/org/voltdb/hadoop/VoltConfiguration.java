@@ -47,6 +47,7 @@ import org.voltdb.client.ProcCallException;
 import org.voltdb.utils.BulkLoaderErrorHandler;
 import org.voltdb.utils.CSVBulkDataLoader;
 
+import com.google_voltpatches.common.base.Preconditions;
 import com.google_voltpatches.common.base.Predicate;
 import com.google_voltpatches.common.collect.FluentIterable;
 import com.google_voltpatches.common.collect.ImmutableMap;
@@ -226,11 +227,11 @@ public class VoltConfiguration {
         return types;
     }
 
-    private final Configuration m_conf;
     private final String m_tableName;
     private final String [] m_hosts;
     private final String m_userName;
     private final String m_password;
+    private final int m_batchSize;
 
     /**
      * Reads volt specific configuration parameters from the
@@ -239,18 +240,33 @@ public class VoltConfiguration {
      * @param conf job configuration
      */
     public VoltConfiguration(Configuration conf) {
-        m_conf = conf;
-        m_tableName = m_conf.get(TABLENAME_PROP);
-        m_hosts = m_conf.getStrings(HOSTNAMES_PROP, new String[]{});
-        m_userName = m_conf.get(USERNAME_PROP);
-        m_password = m_conf.get(PASSWORD_PROP);
+        m_tableName = conf.get(TABLENAME_PROP);
+        m_hosts = conf.getStrings(HOSTNAMES_PROP, new String[]{});
+        m_userName = conf.get(USERNAME_PROP);
+        m_password = conf.get(PASSWORD_PROP);
+        m_batchSize = conf.getInt(BATCHSIZE_PROP, BATCHSIZE_DFLT);
     }
 
     /**
-     * @return the configuration from which it was constructed
+     * Constructs a configuration instance from the given parameters
+     *
+     * @param tableName
+     * @param hosts
+     * @param userName
+     * @param password
      */
-    public Configuration getConfiguration() {
-        return m_conf;
+    public VoltConfiguration(String tableName, String [] hosts, String userName, String password) {
+        Preconditions.checkArgument(
+                tableName != null && !tableName.trim().isEmpty(),
+                "null or empty table name");
+        Preconditions.checkArgument(
+                hosts != null && hosts.length > 0, "null or empty hosts");
+
+        m_tableName = tableName;
+        m_hosts = hosts;
+        m_userName = userName;
+        m_password = password;
+        m_batchSize = BATCHSIZE_DFLT;
     }
 
     public String getUserName() {
@@ -305,13 +321,9 @@ public class VoltConfiguration {
     private static ClientImpl getVoltDBClient(
             String user, String password, String [] hostNames) throws IOException {
 
-        ClientConfig cf;
-        if (isNullOrEmpty.apply(user)) {
-            cf = new ClientConfig(user,password);
-        } else {
-            cf = new ClientConfig();
-        }
+        ClientConfig cf = new ClientConfig(user,password);
         cf.setReconnectOnConnectionLoss(true);
+
         if (hostNames.length == 0 || FluentIterable.of(hostNames).allMatch(isNullOrEmpty)) {
             throw new IOException("Hosts are improperly specified");
         }
@@ -384,9 +396,7 @@ public class VoltConfiguration {
         CSVBulkDataLoader loader = null;
         try {
             loader = new CSVBulkDataLoader(
-                    getVoltDBClient(), getTableName(),
-                    m_conf.getInt(BATCHSIZE_PROP, BATCHSIZE_DFLT), errorHandler
-                    );
+                    getVoltDBClient(), getTableName(), m_batchSize, errorHandler);
         } catch (Exception e) {
             throw new IOException("Unable to instantiate a VoltDB bulk loader", e);
         }

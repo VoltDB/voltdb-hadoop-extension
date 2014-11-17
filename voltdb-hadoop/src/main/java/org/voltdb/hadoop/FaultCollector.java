@@ -47,7 +47,7 @@ public class FaultCollector implements BulkLoaderErrorHandler {
     public static int MAXFAULTS = 10;
     public static int CHECKEVERY = 30;
 
-    private final LinkedBlockingQueue<Fault> m_queue = new LinkedBlockingQueue<>(MAXFAULTS);
+    private final LinkedBlockingQueue<Fault> m_queue = new LinkedBlockingQueue<Fault>(MAXFAULTS);
     private final TextOutputAdapter m_adapter;
 
     private volatile int m_faultCount = 0;

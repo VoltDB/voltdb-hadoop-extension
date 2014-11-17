@@ -1,1 +1,1 @@
-include 'voltdb-hadoop','voltdb-pig'
+include 'voltdb-hadoop','voltdb-pig','voltdb-hive'

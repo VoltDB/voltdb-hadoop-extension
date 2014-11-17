@@ -26,19 +26,20 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'groovy'
 
-project.description = 'ValtDB Pig Integration'
+project.description = 'ValtDB Hive Integration'
 
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
 dependencies {
     compile  project(path: ':voltdb-hadoop')
-    compile 'org.apache.pig:pig:0.13.0'
+    compile 'org.apache.hive:hive-serde:0.13.1'
+    compile 'org.apache.hive:hive-cli:0.13.1'
 
     testCompile 'org.spockframework:spock-core:1.0-groovy-2.3-SNAPSHOT'
     testCompile 'org.hamcrest:hamcrest-core:1.3'
-    testRuntime "cglib:cglib-nodep:3.1"
-    testRuntime "org.objenesis:objenesis:2.1"
+    testRuntime 'cglib:cglib-nodep:3.1'
+    testRuntime 'org.objenesis:objenesis:2.1'
 }
 
 artifacts { 
