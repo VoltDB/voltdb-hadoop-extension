@@ -5,7 +5,7 @@ implementations:
 
 * A VoltLoader hadoop job that loads a TSV file in HDFS into a VoltDB table
 * A Pig `StoreFunc` implementation that can be used to load a Pig data flow into a VoltDB table
-* A Hive `SorageHandler` implementation that allows Hive insert operations to write to VoltDB tables
+* A Hive `StorageHandler` implementation that allows Hive insert operations to write to VoltDB tables
 
 ## Build Instuctions
 Copy the gradle.properties-template file in voltdb-hadoop to voltdb-hadoop/gradle.properties
