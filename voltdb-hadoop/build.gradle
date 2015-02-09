@@ -33,7 +33,7 @@ targetCompatibility = 1.6
 
 dependencies {
     compile 'org.apache.hadoop:hadoop-client:2.3.0'
-    compile fileTree(dir: "${voltdbHome}/voltdb", include: 'voltdbclient*.jar')
+    compile 'org.voltdb:voltdbclient:5.0'
 
     testCompile 'org.spockframework:spock-core:1.0-groovy-2.3-SNAPSHOT'
     testCompile 'org.hamcrest:hamcrest-core:1.3'
