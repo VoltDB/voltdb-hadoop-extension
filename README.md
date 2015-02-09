@@ -8,11 +8,6 @@ implementations:
 * A Hive `StorageHandler` implementation that allows Hive insert operations to write to VoltDB tables
 
 ## Build Instuctions
-Copy the gradle.properties-template file in voltdb-hadoop to voltdb-hadoop/gradle.properties
-```bash
-$ cp voltdb-hadoop/gradle.properties-template voltdb-hadoop/gradle.properties
-```
-Edit `voltdb-hadoop/gradle.properties`, and set the `voltdbHome` property to the location where your VoltDB distribution resides.
 
 Build by invoking the gradlew script
 ```bash
@@ -20,6 +15,11 @@ $ ./gradlew jar
 ```
 this builds jar artifacts in `voltb-{hadoop,hive,pig}/build/libs/`
 
+To setup eclipse projects to play around with the sources and tests, invoke the
+eclipse task as follows:
+```bash
+$ ./gradlew eclipse
+```
 Invoke gradlew as follows for more information on what other build tasks are available
 ```bash
 $ ./gradlew tasks --all

@@ -1,2 +1,0 @@
-# set it to where you have installed VoltDB
-voltdbHome=${VOLTDB_HOME}
