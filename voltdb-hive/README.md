@@ -26,7 +26,7 @@ and it accepts the following configuration properties
 
 ##Usage
 ```sql
-ADD JAR voltdbclient-4.9.jar;
+ADD JAR voltdbclient-6.4.jar;
 ADD JAR voltdb-hadoop-1.0-SNAPSHOT.jar;
 ADD JAR voltdb-hive-1.0-SNAPSHOT.jar;
 
@@ -47,3 +47,42 @@ INSERT INTO TABLE VOLTSINK SELECT * FROM SOURCE_TABLE;
 ```
 
 The VOLTSINK column types match the number, order, and types of the VoltDB table LOADME columns.
+
+##Beeline CLI
+
+Hive CLI has been deprecated and replaced with [Beeline](https://cwiki.apache.org/confluence/display/Hive/Replacing+the+Implementation+of+Hive+CLI+Using+Beeline). 
+Beeline CLI uses [HiveServer2 clients](https://cwiki.apache.org/confluence/display/Hive/HiveServer2+Clients). There is no fundamental difference between Hive CLI and Beeline CLI regarding the usage of
+*VoltDB Hive Storage Handler*  
+
+With Beeline, connect Hive2:
+```
+$beeline
+beeline>!connect jdbc:hive2://<url>:<port #> <user>
+example:
+!connect jdbc:hive2://localhost:10000 cloudera 
+```
+For complete Beeline CLI reference, check out [Beeline Commands](https://cwiki.apache.org/confluence/display/Hive/HiveServer2+Clients#HiveServer2Clients-BeelineHiveCommands)
+
+Then execute:
+```
+ADD JAR voltdbclient-6.4.jar;
+ADD JAR voltdb-hadoop-1.0-SNAPSHOT.jar;
+ADD JAR voltdb-hive-1.0-SNAPSHOT.jar;
+
+CREATE TABLE VOLTSINK (
+   IFIELD INT,
+   LFIELD BIGINT,
+   FFIELD DOUBLE,
+   SFIELD STRING,
+   TFIELD TIMESTAMP,
+   BFIELD BINARY
+) STORED BY 'org.voltdb.hive.VoltStorageHandler' 
+  WITH SERDEPROPERTIES(
+      'voltdb.table'='LOADME',
+      'voltdb.servers'='stefanows'
+);
+
+INSERT INTO TABLE VOLTSINK SELECT * FROM SOURCE_TABLE;
+```
+
+Make sure that the connected user has the permission to have access to the JAR files and other resources on Hive. 
