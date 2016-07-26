@@ -85,4 +85,4 @@ CREATE TABLE VOLTSINK (
 INSERT INTO TABLE VOLTSINK SELECT * FROM SOURCE_TABLE;
 ```
 
-Make sure that the connected user has privileges to have access to the JAR files and other resources on Hive. 
+Make sure that the connected user has the permission to have access to the JAR files and other resources on Hive. 
