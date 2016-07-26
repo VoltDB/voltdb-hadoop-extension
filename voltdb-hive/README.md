@@ -57,10 +57,12 @@ Beeline CLI uses [HiveServer2 clients](https://cwiki.apache.org/confluence/displ
 With Beeline, connect Hive2:
 ```
 $beeline
-beeline>!connect jdbc:hive2://<url>:<port #> <user> <password> org.apache.hive.jdbc.HiveDriver 
+beeline>!connect jdbc:hive2://<url>:<port #> <user>
 such as:
-!connect jdbc:hive2://localhost:10000 cloudera cloudera org.apache.hive.jdbc.HiveDriver 
+!connect jdbc:hive2://localhost:10000 cloudera 
 ```
+For complete Beeline CLI reference, check out [Beeline Commands](https://cwiki.apache.org/confluence/display/Hive/HiveServer2+Clients#HiveServer2Clients-BeelineHiveCommands)
+
 Then execute:
 ```
 ADD JAR voltdbclient-6.4.jar;
@@ -83,4 +85,4 @@ CREATE TABLE VOLTSINK (
 INSERT INTO TABLE VOLTSINK SELECT * FROM SOURCE_TABLE;
 ```
 
-Make sure that the connected users have privileges to have access to the JAR files. 
+Make sure that the connected user has privileges to have access to the JAR files and other resources on Hive. 
