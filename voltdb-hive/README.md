@@ -58,7 +58,7 @@ With Beeline, connect Hive2:
 ```
 $beeline
 beeline>!connect jdbc:hive2://<url>:<port #> <user>
-such as:
+example:
 !connect jdbc:hive2://localhost:10000 cloudera 
 ```
 For complete Beeline CLI reference, check out [Beeline Commands](https://cwiki.apache.org/confluence/display/Hive/HiveServer2+Clients#HiveServer2Clients-BeelineHiveCommands)
