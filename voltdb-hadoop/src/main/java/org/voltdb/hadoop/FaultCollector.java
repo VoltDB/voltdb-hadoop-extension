@@ -46,13 +46,13 @@ public class FaultCollector implements BulkLoaderErrorHandler {
     public static int MAXFAULTS = 10;
     public static int CHECKEVERY = 30;
 
-    private final LinkedBlockingQueue<Fault> m_queue = new LinkedBlockingQueue<Fault>(MAXFAULTS);
+    private final LinkedBlockingQueue<Fault> m_queue;
     private final TextOutputAdapter m_adapter;
 
     private volatile int m_faultCount = 0;
     private volatile int m_checkCount = 0;
 
-    private int m_maxBulkLoaderErrors = MAXFAULTS;
+    private final int m_maxBulkLoaderErrors;
 
     /**
      * Constructs a collector. It uses the given adapter to log
@@ -60,8 +60,10 @@ public class FaultCollector implements BulkLoaderErrorHandler {
      *
      * @param adapter to format {@linkplain VoltRecord}
      */
-    public FaultCollector(TextOutputAdapter adapter) {
+    public FaultCollector(TextOutputAdapter adapter, int maxErrors) {
         m_adapter = adapter;
+        m_maxBulkLoaderErrors = maxErrors > 0 ? maxErrors : MAXFAULTS;
+        m_queue = new LinkedBlockingQueue<Fault>(m_maxBulkLoaderErrors);
     }
 
     /**
@@ -142,9 +144,5 @@ public class FaultCollector implements BulkLoaderErrorHandler {
         if (hasReachedErrorLimit()) {
             throw new IOException("VoltDB loader reached the maximum of allowable errors: check logs for specific load errors");
         }
-    }
-
-    public void setMaxBulkLoaderError(int maxBulkLoaderErrors) {
-        m_maxBulkLoaderErrors = maxBulkLoaderErrors;
     }
 }

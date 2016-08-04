@@ -411,9 +411,6 @@ public class VoltConfiguration {
         try {
             loader = new CSVBulkDataLoader(
                     getVoltDBClient(), m_config.getTableName(), m_config.getBatchSize(), errorHandler);
-            if(errorHandler instanceof FaultCollector){
-                ((FaultCollector)errorHandler).setMaxBulkLoaderError(m_config.getMaxBulkLoaderErrors());
-            }
         } catch (Exception e) {
             throw new IOException("Unable to instantiate a VoltDB bulk loader", e);
         }
@@ -478,7 +475,7 @@ public class VoltConfiguration {
         @Override
         public String toString() {
             return String.format("Table: %s, User: %s, Password: %s, Servers: %s, Batch Size: %d, Client Timeout: %d, Max errors: %d",
-                    m_tableName, m_userName, m_password, Arrays.toString(m_hosts), m_clientTimeout, m_maxBulkLoaderErrors);
+                    m_tableName, m_userName, m_password, Arrays.toString(m_hosts), m_batchSize, m_clientTimeout, m_maxBulkLoaderErrors);
         }
     }
 }
