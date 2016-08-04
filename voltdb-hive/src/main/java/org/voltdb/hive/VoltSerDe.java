@@ -1,4 +1,7 @@
-/* This file is part of VoltDB.
+/*
+ * The MIT License (MIT)
+ *
+ * This file is part of VoltDB.
  * Copyright (C) 2008-2016 VoltDB Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,6 +31,10 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Level;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.serde.serdeConstants;
@@ -80,6 +87,8 @@ import com.google_voltpatches.common.collect.FluentIterable;
  * <p>
  */
 public class VoltSerDe extends AbstractSerDe {
+
+    final static Log LOG = LogFactory.getLog("org.voltdb.hive");
 
     public final static String USER_PROP = "voltdb.user";
     public final static String PASSWORD_PROP = "voltdb.password";
@@ -202,6 +211,7 @@ public class VoltSerDe extends AbstractSerDe {
             throw new VoltSerdeException("uanble to setup a VoltDB context", e);
         }
         m_oig = new VoltObjectInspectorGenerator(columnNames, columnTypes, voltTypes);
+        LOG.info(config.toString());
     }
 
     @Override

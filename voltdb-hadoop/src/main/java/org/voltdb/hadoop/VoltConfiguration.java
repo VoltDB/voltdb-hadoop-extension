@@ -1,4 +1,7 @@
-/* This file is part of VoltDB.
+/*
+ * The MIT License (MIT)
+ *
+ * This file is part of VoltDB.
  * Copyright (C) 2008-2016 VoltDB Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -470,6 +473,12 @@ public class VoltConfiguration {
 
         public int getMaxBulkLoaderErrors() {
             return m_maxBulkLoaderErrors;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Table: %s, User: %s, Password: %s, Servers: %s, Batch Size: %d, Client Timeout: %d, Max errors: %d",
+                    m_tableName, m_userName, m_password, Arrays.toString(m_hosts), m_clientTimeout, m_maxBulkLoaderErrors);
         }
     }
 }
