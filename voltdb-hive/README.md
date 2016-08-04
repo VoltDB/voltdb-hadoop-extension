@@ -53,7 +53,7 @@ jdbc:hive2://localhost:10000> ADD JAR /home/cloudera/voltdb-hadoop-1.1-SNAPSHOT.
 jdbc:hive2://localhost:10000> ADD JAR /home/cloudera/voltdb-hive-1.1-SNAPSHOT.jar; 
 ```
 
-then create table on VoltDb and create table on Hive:
+then create table on VoltDB and create table on Hive:
 ```
 CREATE TABLE VOLTSINK (
    IFIELD INT,
@@ -65,7 +65,10 @@ CREATE TABLE VOLTSINK (
 ) STORED BY 'org.voltdb.hive.VoltStorageHandler' 
   WITH SERDEPROPERTIES(
       'voltdb.table'='LOADME',
-      'voltdb.servers'='stefanows'
+      'voltdb.servers'='stefanows',
+      'voltdb.batchSize'='50', 
+      'voltdb.clientTimeout'='600000',
+      'voltdb.maxErrors'='100'); 
 );
 
 The VOLTSINK column types match the number, order, and types of the VoltDB table LOADME columns.
