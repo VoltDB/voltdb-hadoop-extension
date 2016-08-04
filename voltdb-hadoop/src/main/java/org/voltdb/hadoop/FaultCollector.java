@@ -52,6 +52,8 @@ public class FaultCollector implements BulkLoaderErrorHandler {
     private volatile int m_faultCount = 0;
     private volatile int m_checkCount = 0;
 
+    private int m_maxBulkLoaderErrors = MAXFAULTS;
+
     /**
      * Constructs a collector. It uses the given adapter to log
      * rows that are the source of the faults
@@ -106,7 +108,7 @@ public class FaultCollector implements BulkLoaderErrorHandler {
     @Override
     public boolean hasReachedErrorLimit() {
         final int currentCount = m_faultCount;
-        return currentCount >= MAXFAULTS;
+        return currentCount >= m_maxBulkLoaderErrors;
     }
 
     public void check(boolean eagerly) throws IOException {
@@ -142,4 +144,7 @@ public class FaultCollector implements BulkLoaderErrorHandler {
         }
     }
 
+    public void setMaxBulkLoaderError(int maxBulkLoaderErrors) {
+        m_maxBulkLoaderErrors = maxBulkLoaderErrors;
+    }
 }

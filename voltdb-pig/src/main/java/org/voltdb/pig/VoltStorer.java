@@ -138,7 +138,7 @@ public class VoltStorer extends StoreFunc {
 
     @Override
     public void putNext(Tuple t) throws IOException {
-        final String tableName = m_conf.getTableName();
+        final String tableName = m_conf.getConfig().getTableName();
         try {
             m_writer.write(new Text(tableName), m_adapter.adapt(t, new VoltRecord(tableName)));
         } catch (InterruptedException e) {

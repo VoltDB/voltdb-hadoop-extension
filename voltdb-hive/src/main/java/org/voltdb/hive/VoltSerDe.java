@@ -44,6 +44,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 import org.apache.hadoop.io.Writable;
 import org.voltdb.VoltType;
+import org.voltdb.hadoop.FaultCollector;
 import org.voltdb.hadoop.VoltConfiguration;
 import org.voltdb.hadoop.VoltRecord;
 
@@ -72,6 +73,9 @@ import com.google_voltpatches.common.collect.FluentIterable;
  * <li>{@code voltdb.table} (required) destination VoltDB table</li>
  * <li>{@code voltdb.user} (optional) VoltDB user name</li>
  * <li>{@code voltdb.password} (optional) VoltDB user password</li>
+ * <li>{@code voltdb.batchSize} (optional) VoltDB BulkLoader batch size</li>
+ * <li>{@code voltdb.clientTimeout} (optional) VoltDB client timeout</li>
+ * <li>{@code voltdb.maxErrors} (optional) VoltDB BulkLoader max errors</li>
  * </ul>
  * <p>
  */
@@ -81,6 +85,9 @@ public class VoltSerDe extends AbstractSerDe {
     public final static String PASSWORD_PROP = "voltdb.password";
     public final static String SERVERS_PROP = "voltdb.servers";
     public final static String TABLE_PROP = "voltdb.table";
+    public final static String BATCH_SIZE_PROP = "voltdb.batchSize";
+    public final static String CLIENT_TIMEOUT_PROP = "voltdb.clientTimeout";
+    public final static String MAX_ERRORS_PROP = "voltdb.maxErrors";
 
     private final Splitter m_splitter = Splitter.on(",").trimResults().omitEmptyStrings();
     private VoltObjectInspectorGenerator m_oig;
@@ -114,6 +121,9 @@ public class VoltSerDe extends AbstractSerDe {
      * <li>{@code voltdb.table} (required) destination VoltDB table</li>
      * <li>{@code voltdb.user} (optional) VoltDB user name</li>
      * <li>{@code voltdb.password} (optional) VoltDB user password</li>
+     * <li>{@code voltdb.batchSize} (optional) VoltDB BulkLoader batch size</li>
+     * <li>{@code voltdb.clientTimeout} (optional) VoltDB client timeout</li>
+     * <li>{@code voltdb.maxErrors} (optional) VoltDB BulkLoader max errors</li>
      * </ul>
      * <p>
      * and makes sure that the Hive table column types match the destination
@@ -149,12 +159,42 @@ public class VoltSerDe extends AbstractSerDe {
                   );
         }
 
-        if (conf != null) {
-            VoltConfiguration.configureVoltDB(conf, servers, user, password, table);
+        String batch = props.getProperty(BATCH_SIZE_PROP, "");
+        int batchSize = VoltConfiguration.BATCHSIZE_DFLT;
+        if(!"".equals(batch)){
+            try{
+                batchSize = Integer.parseInt(batch);
+            } catch (NumberFormatException e) {
+                throw new VoltSerdeException("Batch size is not valid", e);
+            }
+        }
+        String clientTimeout = props.getProperty(CLIENT_TIMEOUT_PROP, "");
+        long timeout = VoltConfiguration.TIMEOUT_DFLT;
+        if(!"".equals(clientTimeout)){
+            try{
+                timeout = Long.parseLong(clientTimeout);
+            } catch (NumberFormatException e) {
+                throw new VoltSerdeException("VoltDB client timeout value is not valid", e);
+            }
         }
 
+        String errors = props.getProperty(MAX_ERRORS_PROP, "");
+        int maxErrors = FaultCollector.MAXFAULTS;
+        if(!"".equals(clientTimeout)){
+            try{
+                maxErrors = Integer.parseInt(errors);
+            } catch (NumberFormatException e) {
+                throw new VoltSerdeException("VoltDB maximal error value is not valid", e);
+            }
+        }
+
+        if (conf != null) {
+            VoltConfiguration.configureVoltDB(conf, servers, user, password, table, batchSize, timeout, maxErrors);
+        }
+
+        VoltConfiguration.Config config = new VoltConfiguration.Config(table, servers, user, password, batchSize, timeout, maxErrors);
         VoltType [] voltTypes = null;
-        m_voltConf = new VoltConfiguration(table, servers, user, password);
+        m_voltConf = new VoltConfiguration(config);
         try {
             m_voltConf.isMinimallyConfigured();
             voltTypes = m_voltConf.getTableColumnTypes();
@@ -176,7 +216,7 @@ public class VoltSerDe extends AbstractSerDe {
                     + " can only serialize struct types, but we got: "
                     + oi.getTypeName());
         }
-        VoltRecord vr = new VoltRecord(m_voltConf.getTableName());
+        VoltRecord vr = new VoltRecord(m_voltConf.getConfig().getTableName());
         StructObjectInspector soi = (StructObjectInspector)oi;
         List<? extends StructField> structFields = soi.getAllStructFieldRefs();
         List<Object> fieldValues = soi.getStructFieldsDataAsList(obj);

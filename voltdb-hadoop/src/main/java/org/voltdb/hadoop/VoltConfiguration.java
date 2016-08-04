@@ -82,6 +82,13 @@ public class VoltConfiguration {
     /** Load destination table name */
     public static final String TABLENAME_PROP = "mapred.voltdb.table.name";
 
+    /** VoltDB client timeout */
+    public static final String CLIENT_TIMEOUT_PROP = "mapred.voltdb.client.timeout";
+    /** Time out default */
+    public static final long TIMEOUT_DFLT =  2 * 60 * 1000;
+
+    /**max number of errors allowed  */
+    public static final String BULKLOADER_MAX_ERRORS_PROP="mapred.voltdb.bulkerloader.max.errors";
     /**
      * Property for speculative execution of MAP tasks
      */
@@ -91,6 +98,8 @@ public class VoltConfiguration {
      * Property for speculative execution of REDUCE tasks
      */
     public static final String REDUCE_SPECULATIVE_EXEC = "mapreduce.reduce.speculative";
+
+    private final Config  m_config;
 
     /**
      * Sets the job configuration properties that correspond to the given parameters
@@ -154,6 +163,28 @@ public class VoltConfiguration {
         if (batchSize > 0)    conf.setInt(BATCHSIZE_PROP, batchSize);
     }
 
+    /**
+     * Sets the job configuration properties that correspond to the given parameters
+     *
+     * @param conf a {@linkplain Configuration}
+     * @param hostNames an array of host names
+     * @param userName
+     * @param password
+     * @param tableName destination table name
+     * @param batchSize
+     * @param clientTimeOut
+     */
+    public static void configureVoltDB(Configuration conf, String [] hostNames,
+            String userName, String password, String tableName,
+            int batchSize, long clientTimeOut, int maxErrors) {
+
+        configureVoltDB(conf, hostNames, userName, password, tableName);
+
+        if (clientTimeOut > 0)   conf.setLong(CLIENT_TIMEOUT_PROP, clientTimeOut);
+        if (batchSize > 0)    conf.setInt(BATCHSIZE_PROP, batchSize);
+        if (maxErrors > 0)    conf.setInt(BULKLOADER_MAX_ERRORS_PROP, maxErrors);
+    }
+
     /*
      * Table column types cache consists of an immutable map that is replaced every times
      * a new table is inserted into it. Updates are ignored
@@ -176,17 +207,16 @@ public class VoltConfiguration {
      * Does a cache lookup. If it is a miss it uses the remaining parameters
      * to connect to voltdb and query the given table column types
      */
-    private static VoltType[] typesFor(
-            String user, String password, String [] hosts, String tableName)
+    private static VoltType[] typesFor(Config config)
             throws IOException
     {
-        VoltType [] types = m_typeCache.getReference().get(tableName);
+        VoltType [] types = m_typeCache.getReference().get(config.getTableName());
         if (types == null) {
-            Client volt = getVoltDBClient(user, password, hosts);
+            Client volt = getVoltDBClient(config);
             try {
-                types = getTableColumnTypes(volt, tableName);
+                types = getTableColumnTypes(volt, config.getTableName());
                 if (types.length == 0) {
-                    throw new IOException("Table " + tableName + " does not exist");
+                    throw new IOException("Table " + config.getTableName() + " does not exist");
                 }
             } finally {
                 try { volt.close();} catch (InterruptedException ignoreIt) {};
@@ -195,7 +225,7 @@ public class VoltConfiguration {
             int [] stamp = new int[1];
             do try {
                 oldmap = m_typeCache.get(stamp);
-                newmap = addEntry(oldmap, tableName, types);
+                newmap = addEntry(oldmap, config.getTableName(), types);
             } catch (IllegalArgumentException ignoreDuplicates) {
                 break;
             } while (!m_typeCache.compareAndSet(oldmap, newmap, stamp[0], stamp[0]+1));
@@ -226,12 +256,6 @@ public class VoltConfiguration {
         return types;
     }
 
-    private final String m_tableName;
-    private final String [] m_hosts;
-    private final String m_userName;
-    private final String m_password;
-    private final int m_batchSize;
-
     /**
      * Reads volt specific configuration parameters from the
      * given {@linkplain JobConf} job configuration
@@ -239,11 +263,13 @@ public class VoltConfiguration {
      * @param conf job configuration
      */
     public VoltConfiguration(Configuration conf) {
-        m_tableName = conf.get(TABLENAME_PROP);
-        m_hosts = conf.getStrings(HOSTNAMES_PROP, new String[]{});
-        m_userName = conf.get(USERNAME_PROP);
-        m_password = conf.get(PASSWORD_PROP);
-        m_batchSize = conf.getInt(BATCHSIZE_PROP, BATCHSIZE_DFLT);
+        m_config = new Config(conf.get(TABLENAME_PROP),
+                conf.getStrings(HOSTNAMES_PROP, new String[]{}),
+                conf.get(USERNAME_PROP),
+                conf.get(PASSWORD_PROP),
+                conf.getInt(BATCHSIZE_PROP, BATCHSIZE_DFLT),
+                conf.getLong(CLIENT_TIMEOUT_PROP, TIMEOUT_DFLT),
+                conf.getInt(BULKLOADER_MAX_ERRORS_PROP, FaultCollector.MAXFAULTS));
     }
 
     /**
@@ -261,27 +287,17 @@ public class VoltConfiguration {
         Preconditions.checkArgument(
                 hosts != null && hosts.length > 0, "null or empty hosts");
 
-        m_tableName = tableName;
-        m_hosts = hosts;
-        m_userName = userName;
-        m_password = password;
-        m_batchSize = BATCHSIZE_DFLT;
+        m_config = new Config(tableName, hosts, userName, password, BATCHSIZE_DFLT, TIMEOUT_DFLT, FaultCollector.MAXFAULTS);
     }
 
-    public String getUserName() {
-        return m_userName;
-    }
+    public VoltConfiguration(Config config) {
+        Preconditions.checkArgument(
+                config.getTableName() != null && !config.getTableName() .trim().isEmpty(),
+                "null or empty table name");
+        Preconditions.checkArgument(
+                config.getHosts() != null && config.getHosts().length > 0, "null or empty hosts");
 
-    private String getPassword() {
-        return m_password;
-    }
-
-    private String [] getHosts() {
-        return m_hosts;
-    }
-
-    public String getTableName() {
-        return m_tableName;
+        m_config = config;
     }
 
     /**
@@ -291,17 +307,13 @@ public class VoltConfiguration {
      * @throws IOException if it is not, or it cannot access the VoltDB cluster
      */
     public boolean isMinimallyConfigured() throws IOException {
-        if (   isNullOrEmpty.apply(getTableName())
-            || getHosts().length == 0
-            || getTableColumnTypes() == null
-            || getTableColumnTypes().length == 0
-        ) {
-            String msg = "Properties "
-                       + TABLENAME_PROP
-                       + ", and "
-                       + HOSTNAMES_PROP
-                       + " must be defined";
-            throw new IOException(msg);
+        if (isNullOrEmpty.apply(m_config.getTableName()) || m_config.getHosts().length == 0){
+            throw new IOException(String.format("Properties %s and %s must be defined.", TABLENAME_PROP, HOSTNAMES_PROP));
+        }
+
+        VoltType[] columnTypes = getTableColumnTypes();
+        if(columnTypes == null || columnTypes.length == 0){
+            throw new IOException("Column types do not match");
         }
         return true;
     }
@@ -317,19 +329,19 @@ public class VoltConfiguration {
     /*
      * It creates a VoltDB client from the given parameters.
      */
-    private static ClientImpl getVoltDBClient(
-            String user, String password, String [] hostNames) throws IOException {
+    private static ClientImpl getVoltDBClient(Config config) throws IOException {
 
-        ClientConfig cf = new ClientConfig(user,password);
+        ClientConfig cf = new ClientConfig(config.getUserName(),config.getPassword());
+        cf.setConnectionResponseTimeout(config.getClientTimeout());
         cf.setReconnectOnConnectionLoss(true);
 
-        if (hostNames.length == 0 || FluentIterable.of(hostNames).allMatch(isNullOrEmpty)) {
+        if (config.getHosts().length == 0 || FluentIterable.of(config.getHosts()).allMatch(isNullOrEmpty)) {
             throw new IOException("Hosts are improperly specified");
         }
         ClientImpl client = (ClientImpl)ClientFactory.createClient(cf);
 
         int failCount = 0, attemptCount = 0;
-        for (String hostName: FluentIterable.of(hostNames).filter(not(isNullOrEmpty))) try {
+        for (String hostName: FluentIterable.of(config.getHosts()).filter(not(isNullOrEmpty))) try {
             attemptCount += 1;
             client.createConnection(hostName);
         } catch (IOException e) {
@@ -338,7 +350,7 @@ public class VoltConfiguration {
         }
 
         if (failCount == attemptCount) {
-            throw new IOException("Failed to connect to hosts " + Arrays.toString(hostNames));
+            throw new IOException("Failed to connect to hosts " + Arrays.toString(config.getHosts()));
         }
 
         return client;
@@ -366,7 +378,7 @@ public class VoltConfiguration {
     }
 
     private ClientImpl getVoltDBClient() throws IOException {
-        return getVoltDBClient(getUserName(),getPassword(),getHosts());
+        return getVoltDBClient(m_config);
     }
 
     /**
@@ -377,8 +389,8 @@ public class VoltConfiguration {
      * @throws IOException when it fails to communicate with the VoltDB cluster
      */
     public VoltType[] getTableColumnTypes() throws IOException {
-        VoltType [] types = typesFor(getUserName(), getPassword(), getHosts(), getTableName());
-        DataAdapters.adaptersFor(getTableName(), types);
+        VoltType [] types = typesFor(m_config);
+        DataAdapters.adaptersFor(m_config.getTableName(), types);
         return types;
     }
 
@@ -389,16 +401,75 @@ public class VoltConfiguration {
      * @throws IOException
      */
     public CSVBulkDataLoader getBulkLoader(BulkLoaderErrorHandler errorHandler) throws IOException {
-        if (isNullOrEmpty.apply(getTableName())) {
+        if (isNullOrEmpty.apply(m_config.getTableName())) {
             throw new IOException("Property " + TABLENAME_PROP + " is not specified");
         }
         CSVBulkDataLoader loader = null;
         try {
             loader = new CSVBulkDataLoader(
-                    getVoltDBClient(), getTableName(), m_batchSize, errorHandler);
+                    getVoltDBClient(), m_config.getTableName(), m_config.getBatchSize(), errorHandler);
+            if(errorHandler instanceof FaultCollector){
+                ((FaultCollector)errorHandler).setMaxBulkLoaderError(m_config.getMaxBulkLoaderErrors());
+            }
         } catch (Exception e) {
             throw new IOException("Unable to instantiate a VoltDB bulk loader", e);
         }
         return loader;
+    }
+
+    public Config getConfig() {
+        return m_config;
+    }
+
+    /**
+     * A configuration property container
+     *
+     */
+    public static class Config {
+        private final String m_tableName;
+        private final String [] m_hosts;
+        private final String m_userName;
+        private final String m_password;
+        private final int m_batchSize;
+        private final long m_clientTimeout;
+        private final int m_maxBulkLoaderErrors;
+
+        public Config(String tableName, String[] hosts, String userName, String password, int batchSize, long clientTimeout, int bulkLoaderMaxErrors){
+            m_tableName = tableName;
+            m_hosts = hosts;
+            m_userName = userName;
+            m_password = password;
+            m_batchSize = batchSize;
+            m_clientTimeout = clientTimeout;
+            m_maxBulkLoaderErrors = bulkLoaderMaxErrors;
+        }
+
+        public String getUserName() {
+            return m_userName;
+        }
+
+        private String getPassword() {
+            return m_password;
+        }
+
+        private String [] getHosts() {
+            return m_hosts;
+        }
+
+        public String getTableName() {
+            return m_tableName;
+        }
+
+        public int getBatchSize(){
+            return m_batchSize;
+        }
+
+        public long getClientTimeout() {
+            return m_clientTimeout;
+        }
+
+        public int getMaxBulkLoaderErrors() {
+            return m_maxBulkLoaderErrors;
+        }
     }
 }

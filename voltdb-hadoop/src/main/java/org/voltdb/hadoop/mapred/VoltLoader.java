@@ -53,7 +53,7 @@ public class VoltLoader {
         @Override
         public void configure(JobConf job) {
             m_conf = new VoltConfiguration(job);
-            m_table = m_conf.getTableName();
+            m_table = m_conf.getConfig().getTableName();
             try {
                 m_adapter = new TextInputAdapter(m_conf.getTableColumnTypes());
             } catch (IOException e) {
