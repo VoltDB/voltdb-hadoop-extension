@@ -24,8 +24,9 @@ and it accepts the following configuration properties
 * `voltdb.user` _(optional)_ VoltDB user name
 * `voltdb.password` _(optional)_ VoltDB user password
 * `voltdb.batchSize` _(optional)_ VoltDB BulkLoader batch size
-* `voltdb.clientTimeout` _(optional)_ VoltDB client time out
+* `voltdb.clientTimeout` _(optional)_ VoltDB client time out in milliseconds
 * `voltdb.maxErrors` _(optional)_ VoltDB BulkLoader maximal number of errors allowed
+* `voltdb.upsert` _(optional)_ VoltDB BulkLoader in upsert mode. Value 'true' or 'false'
 
 ##Usage
 
@@ -44,13 +45,13 @@ example:
 For complete Beeline CLI reference, check out [Beeline Commands](https://cwiki.apache.org/confluence/display/Hive/HiveServer2+Clients#HiveServer2Clients-BeelineHiveCommands)
 
 
-Then add required jars voltdbclient-6.4.jar, voltdb-hadoop-1.0-SNAPSHOT.jar and voltdb-hive-1.0-SNAPSHOT.jar;
+Then add voltdbclient-6.4.jar, voltdb-hadoop-1.0-SNAPSHOT.jar and voltdb-hive-1.0-SNAPSHOT.jar in order;
 
 example:
 ```
-jdbc:hive2://localhost:10000> ADD JAR /home/cloudera/voltdb-ent-6.4/voltdb/voltdbclient-6.4.jar; 
-jdbc:hive2://localhost:10000> ADD JAR /home/cloudera/voltdb-hadoop-1.1-SNAPSHOT.jar; 
-jdbc:hive2://localhost:10000> ADD JAR /home/cloudera/voltdb-hive-1.1-SNAPSHOT.jar; 
+(1) jdbc:hive2://localhost:10000> ADD JAR /home/cloudera/voltdb-ent-6.4/voltdb/voltdbclient-6.4.jar;
+(2) jdbc:hive2://localhost:10000> ADD JAR /home/cloudera/voltdb-hadoop-1.1-SNAPSHOT.jar;
+(3) jdbc:hive2://localhost:10000> ADD JAR /home/cloudera/voltdb-hive-1.1-SNAPSHOT.jar;
 ```
 
 then create table on VoltDB and create table on Hive:

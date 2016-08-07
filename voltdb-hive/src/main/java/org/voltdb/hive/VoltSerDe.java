@@ -31,11 +31,6 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
-import java.util.logging.Level;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.AbstractSerDe;
@@ -83,12 +78,11 @@ import com.google_voltpatches.common.collect.FluentIterable;
  * <li>{@code voltdb.batchSize} (optional) VoltDB BulkLoader batch size</li>
  * <li>{@code voltdb.clientTimeout} (optional) VoltDB client timeout</li>
  * <li>{@code voltdb.maxErrors} (optional) VoltDB BulkLoader max errors</li>
+ * <li>{@code voltdb.upsert} (optional) VoltDB BulkLoader upsert mode</li>
  * </ul>
  * <p>
  */
 public class VoltSerDe extends AbstractSerDe {
-
-    final static Log LOG = LogFactory.getLog("org.voltdb.hive");
 
     public final static String USER_PROP = "voltdb.user";
     public final static String PASSWORD_PROP = "voltdb.password";
@@ -97,6 +91,8 @@ public class VoltSerDe extends AbstractSerDe {
     public final static String BATCH_SIZE_PROP = "voltdb.batchSize";
     public final static String CLIENT_TIMEOUT_PROP = "voltdb.clientTimeout";
     public final static String MAX_ERRORS_PROP = "voltdb.maxErrors";
+    public final static String UPSERT_PROP = "voltdb.upsert";
+
 
     private final Splitter m_splitter = Splitter.on(",").trimResults().omitEmptyStrings();
     private VoltObjectInspectorGenerator m_oig;
@@ -133,6 +129,7 @@ public class VoltSerDe extends AbstractSerDe {
      * <li>{@code voltdb.batchSize} (optional) VoltDB BulkLoader batch size</li>
      * <li>{@code voltdb.clientTimeout} (optional) VoltDB client timeout</li>
      * <li>{@code voltdb.maxErrors} (optional) VoltDB BulkLoader max errors</li>
+     * <li>{@code voltdb.upsert} (optional) VoltDB BulkLoader upsert mode</li>
      * </ul>
      * <p>
      * and makes sure that the Hive table column types match the destination
@@ -189,7 +186,7 @@ public class VoltSerDe extends AbstractSerDe {
 
         String errors = props.getProperty(MAX_ERRORS_PROP, "");
         int maxErrors = FaultCollector.MAXFAULTS;
-        if(!"".equals(clientTimeout)){
+        if(!"".equals(errors)){
             try{
                 maxErrors = Integer.parseInt(errors);
             } catch (NumberFormatException e) {
@@ -197,21 +194,20 @@ public class VoltSerDe extends AbstractSerDe {
             }
         }
 
+        boolean upsert = "true".equalsIgnoreCase(props.getProperty(UPSERT_PROP, "false"));
         if (conf != null) {
-            VoltConfiguration.configureVoltDB(conf, servers, user, password, table, batchSize, timeout, maxErrors);
+            VoltConfiguration.configureVoltDB(conf, servers, user, password, table, batchSize, timeout, maxErrors, upsert);
         }
 
-        VoltConfiguration.Config config = new VoltConfiguration.Config(table, servers, user, password, batchSize, timeout, maxErrors);
+        VoltConfiguration.Config config = new VoltConfiguration.Config(table, servers, user, password, batchSize, timeout, maxErrors, upsert);
         VoltType [] voltTypes = null;
         m_voltConf = new VoltConfiguration(config);
         try {
-            m_voltConf.isMinimallyConfigured();
             voltTypes = m_voltConf.getTableColumnTypes();
         } catch (IOException e) {
-            throw new VoltSerdeException("uanble to setup a VoltDB context", e);
+            throw new VoltSerdeException("Uanble to setup a VoltDB context. Properties:" + config.toString(), e);
         }
         m_oig = new VoltObjectInspectorGenerator(columnNames, columnTypes, voltTypes);
-        LOG.info(config.toString());
     }
 
     @Override

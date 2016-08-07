@@ -142,7 +142,8 @@ public class FaultCollector implements BulkLoaderErrorHandler {
             }
         }
         if (hasReachedErrorLimit()) {
-            throw new IOException("VoltDB loader reached the maximum of allowable errors: check logs for specific load errors");
+            throw new IOException("VoltDB loader reached the maximum of allowable errors: check logs for specific load errors. max error:" +
+                       this.m_maxBulkLoaderErrors + " fault count:" + this.m_faultCount);
         }
     }
 }

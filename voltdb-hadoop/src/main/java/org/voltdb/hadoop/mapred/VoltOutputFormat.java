@@ -77,8 +77,5 @@ public class VoltOutputFormat implements OutputFormat<Text,VoltRecord> {
     @Override
     public void checkOutputSpecs(FileSystem ignored, JobConf job)
             throws IOException {
-        VoltConfiguration conf = new VoltConfiguration(job);
-        conf.isMinimallyConfigured();
     }
-
 }

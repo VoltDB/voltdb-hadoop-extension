@@ -91,7 +91,11 @@ public class VoltConfiguration {
     public static final long TIMEOUT_DFLT =  2 * 60 * 1000;
 
     /**max number of errors allowed  */
-    public static final String BULKLOADER_MAX_ERRORS_PROP="mapred.voltdb.bulkerloader.max.errors";
+    public static final String BULKLOADER_MAX_ERRORS_PROP="mapred.voltdb.bulkloader.max.errors";
+
+    /**Bulkloader in upsert mode  */
+    public static final String BULKLOADER_UPSERT_PROP="mapred.voltdb.bulkloader.upsert";
+
     /**
      * Property for speculative execution of MAP tasks
      */
@@ -176,16 +180,18 @@ public class VoltConfiguration {
      * @param tableName destination table name
      * @param batchSize
      * @param clientTimeOut
+     * @param upsert
      */
     public static void configureVoltDB(Configuration conf, String [] hostNames,
             String userName, String password, String tableName,
-            int batchSize, long clientTimeOut, int maxErrors) {
+            int batchSize, long clientTimeOut, int maxErrors, boolean upsert) {
 
         configureVoltDB(conf, hostNames, userName, password, tableName);
 
         if (clientTimeOut > 0)   conf.setLong(CLIENT_TIMEOUT_PROP, clientTimeOut);
         if (batchSize > 0)    conf.setInt(BATCHSIZE_PROP, batchSize);
         if (maxErrors > 0)    conf.setInt(BULKLOADER_MAX_ERRORS_PROP, maxErrors);
+        conf.setBoolean(BULKLOADER_UPSERT_PROP, upsert);
     }
 
     /*
@@ -210,20 +216,35 @@ public class VoltConfiguration {
      * Does a cache lookup. If it is a miss it uses the remaining parameters
      * to connect to voltdb and query the given table column types
      */
-    private static VoltType[] typesFor(Config config)
-            throws IOException
+    private static VoltType[] typesFor(Config config) throws IOException
     {
         VoltType [] types = m_typeCache.getReference().get(config.getTableName());
         if (types == null) {
-            Client volt = getVoltDBClient(config);
-            try {
-                types = getTableColumnTypes(volt, config.getTableName());
-                if (types.length == 0) {
-                    throw new IOException("Table " + config.getTableName() + " does not exist");
+
+            int retryCount = 0;
+            while(retryCount < 10){
+                Client volt = getVoltDBClient(config);
+                try {
+                    types = getTableColumnTypes(volt, config.getTableName());
+                    retryCount = Integer.MAX_VALUE;
+                } catch (ProcCallException pe) {
+                    retryCount++;
+                    if(retryCount > 10){
+                        throw new IOException("Unable to check column meta data");
+                    }
+                    try { volt.close();} catch (InterruptedException ignoreIt) {};
+                    volt = null;
+                    backOff(retryCount);
+                } finally {
+                    if( volt != null){
+                        try { volt.close();} catch (InterruptedException ignoreIt) {};
+                    }
                 }
-            } finally {
-                try { volt.close();} catch (InterruptedException ignoreIt) {};
             }
+            if (types == null || types.length == 0) {
+                throw new IOException("Table " + config.getTableName() + " does not exist");
+            }
+
             Map<String,VoltType[]> oldmap,newmap;
             int [] stamp = new int[1];
             do try {
@@ -272,7 +293,8 @@ public class VoltConfiguration {
                 conf.get(PASSWORD_PROP),
                 conf.getInt(BATCHSIZE_PROP, BATCHSIZE_DFLT),
                 conf.getLong(CLIENT_TIMEOUT_PROP, TIMEOUT_DFLT),
-                conf.getInt(BULKLOADER_MAX_ERRORS_PROP, FaultCollector.MAXFAULTS));
+                conf.getInt(BULKLOADER_MAX_ERRORS_PROP, FaultCollector.MAXFAULTS),
+                conf.getBoolean(BULKLOADER_UPSERT_PROP, false));
     }
 
     /**
@@ -290,7 +312,7 @@ public class VoltConfiguration {
         Preconditions.checkArgument(
                 hosts != null && hosts.length > 0, "null or empty hosts");
 
-        m_config = new Config(tableName, hosts, userName, password, BATCHSIZE_DFLT, TIMEOUT_DFLT, FaultCollector.MAXFAULTS);
+        m_config = new Config(tableName, hosts, userName, password, BATCHSIZE_DFLT, TIMEOUT_DFLT, FaultCollector.MAXFAULTS, false);
     }
 
     public VoltConfiguration(Config config) {
@@ -363,13 +385,8 @@ public class VoltConfiguration {
      * Calls to the @SystemInformation system procedure to determine the given table
      * column types
      */
-    private static VoltType[] getTableColumnTypes(Client volt, String tableName) throws IOException {
-        ClientResponse cr = null;
-        try {
-            cr = volt.callProcedure("@SystemCatalog", "COLUMNS");
-        } catch (ProcCallException e) {
-            throw new IOException("call to @SystemCatalog", e);
-        }
+    private static VoltType[] getTableColumnTypes(Client volt, String tableName) throws ProcCallException, IOException {
+        ClientResponse cr = volt.callProcedure("@SystemCatalog", "COLUMNS");
         Map<Long, VoltType> columns = new TreeMap<Long, VoltType>();
         VoltTable res = cr.getResults()[0];
         while (res.advanceRow()) {
@@ -407,14 +424,41 @@ public class VoltConfiguration {
         if (isNullOrEmpty.apply(m_config.getTableName())) {
             throw new IOException("Property " + TABLENAME_PROP + " is not specified");
         }
+
         CSVBulkDataLoader loader = null;
-        try {
-            loader = new CSVBulkDataLoader(
-                    getVoltDBClient(), m_config.getTableName(), m_config.getBatchSize(), errorHandler);
-        } catch (Exception e) {
-            throw new IOException("Unable to instantiate a VoltDB bulk loader", e);
+        int retryCount = 0;
+        while(loader == null){
+            ClientImpl client = getVoltDBClient();
+            try {
+                loader = new CSVBulkDataLoader(client, m_config.getTableName(), m_config.getBatchSize(), m_config.isUpsert(), errorHandler);
+            } catch (ProcCallException pe){
+                if(client != null){
+                    try {
+                        client.close();
+                    } catch (InterruptedException e) {
+                        LOG.error("Close client interrupted.", e);
+                    }
+                }
+                retryCount++;
+                if(retryCount > 10){
+                    throw new IOException("Unable to instantiate a VoltDB bulk loader after retry");
+                }
+
+                backOff(retryCount);
+            } catch (Exception e) {
+                throw new IOException("Unable to instantiate a VoltDB bulk loader.Configuration:" + m_config.toString(), e);
+            }
         }
         return loader;
+    }
+
+    private static void backOff(int retryCount) throws IOException{
+
+        try {
+            Thread.sleep(200 * retryCount);
+        } catch (InterruptedException e) {
+            LOG.error("Retry interrupted.", e);
+        }
     }
 
     public Config getConfig() {
@@ -426,6 +470,7 @@ public class VoltConfiguration {
      *
      */
     public static class Config {
+
         private final String m_tableName;
         private final String [] m_hosts;
         private final String m_userName;
@@ -433,8 +478,10 @@ public class VoltConfiguration {
         private final int m_batchSize;
         private final long m_clientTimeout;
         private final int m_maxBulkLoaderErrors;
+        private final boolean m_upsert;
 
-        public Config(String tableName, String[] hosts, String userName, String password, int batchSize, long clientTimeout, int bulkLoaderMaxErrors){
+        public Config(String tableName, String[] hosts, String userName, String password,
+                int batchSize, long clientTimeout, int bulkLoaderMaxErrors, boolean upsert){
             m_tableName = tableName;
             m_hosts = hosts;
             m_userName = userName;
@@ -442,6 +489,7 @@ public class VoltConfiguration {
             m_batchSize = batchSize;
             m_clientTimeout = clientTimeout;
             m_maxBulkLoaderErrors = bulkLoaderMaxErrors;
+            m_upsert = upsert;
         }
 
         public String getUserName() {
@@ -472,10 +520,14 @@ public class VoltConfiguration {
             return m_maxBulkLoaderErrors;
         }
 
+        public boolean isUpsert() {
+            return m_upsert;
+        }
+
         @Override
         public String toString() {
-            return String.format("Table: %s, User: %s, Password: %s, Servers: %s, Batch Size: %d, Client Timeout: %d, Max errors: %d",
-                    m_tableName, m_userName, m_password, Arrays.toString(m_hosts), m_batchSize, m_clientTimeout, m_maxBulkLoaderErrors);
+            return String.format("Table: %s, User: %s, Password: %s, Servers: %s, Batch Size: %d, Client Timeout: %d, Max errors: %d, upsert: %s.",
+                    m_tableName, m_userName, m_password, Arrays.toString(m_hosts), m_batchSize, m_clientTimeout, m_maxBulkLoaderErrors, Boolean.toString(m_upsert));
         }
     }
 }
