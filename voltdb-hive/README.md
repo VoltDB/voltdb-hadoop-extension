@@ -69,7 +69,8 @@ CREATE TABLE VOLTSINK (
       'voltdb.servers'='stefanows',
       'voltdb.batchSize'='50', 
       'voltdb.clientTimeout'='600000',
-      'voltdb.maxErrors'='100'); 
+      'voltdb.maxErrors'='100',
+      'voltdb.upsert'='true'
 );
 
 The VOLTSINK column types match the number, order, and types of the VoltDB table LOADME columns.
