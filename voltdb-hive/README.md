@@ -26,7 +26,6 @@ and it accepts the following configuration properties
 * `voltdb.batchSize` _(optional)_ VoltDB BulkLoader batch size
 * `voltdb.clientTimeout` _(optional)_ VoltDB client time out in milliseconds
 * `voltdb.maxErrors` _(optional)_ VoltDB BulkLoader maximal number of errors allowed
-* `voltdb.upsert` _(optional)_ VoltDB BulkLoader in upsert mode. Value 'true' or 'false'
 
 ##Usage
 
@@ -69,8 +68,7 @@ CREATE TABLE VOLTSINK (
       'voltdb.servers'='stefanows',
       'voltdb.batchSize'='50', 
       'voltdb.clientTimeout'='600000',
-      'voltdb.maxErrors'='100',
-      'voltdb.upsert'='true'
+      'voltdb.maxErrors'='100'
 );
 
 The VOLTSINK column types match the number, order, and types of the VoltDB table LOADME columns.
