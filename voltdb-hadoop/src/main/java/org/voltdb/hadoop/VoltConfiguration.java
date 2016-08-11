@@ -93,9 +93,6 @@ public class VoltConfiguration {
     /**max number of errors allowed  */
     public static final String BULKLOADER_MAX_ERRORS_PROP="mapred.voltdb.bulkloader.max.errors";
 
-    /**Bulkloader in upsert mode  */
-    public static final String BULKLOADER_UPSERT_PROP="mapred.voltdb.bulkloader.upsert";
-
     /**
      * Property for speculative execution of MAP tasks
      */
@@ -113,8 +110,8 @@ public class VoltConfiguration {
      *
      * @param conf a {@linkplain Configuration}
      * @param hostNames an array of host names
-     * @param userName
-     * @param password
+     * @param userName  The user name for client connection
+     * @param password   The password for client connection
      * @param tableName destination table name
      */
     public static void configureVoltDB(Configuration conf, String [] hostNames,
@@ -152,12 +149,12 @@ public class VoltConfiguration {
      *
      * @param conf a {@linkplain Configuration}
      * @param hostNames an array of host names
-     * @param userName
-     * @param password
+     * @param userName  The user name for client connection
+     * @param password  The password for client connection
      * @param tableName destination table name
-     * @param batchSize
-     * @param flushDelay
-     * @param flushSeconds
+     * @param batchSize The batch size for CSVBulkLoader
+     * @param flushDelay The seconds pass before the first loader flush occurs
+     * @param flushSeconds  The seconds pass between flushes
      */
     public static void configureVoltDB(Configuration conf, String [] hostNames,
             String userName, String password, String tableName,
@@ -175,23 +172,22 @@ public class VoltConfiguration {
      *
      * @param conf a {@linkplain Configuration}
      * @param hostNames an array of host names
-     * @param userName
-     * @param password
+     * @param userName The user name for client connection
+     * @param password The password  for client connection
      * @param tableName destination table name
-     * @param batchSize
-     * @param clientTimeOut
-     * @param upsert
+     * @param batchSize The batch size for CSVBulkLoader
+     * @param clientTimeOut The client timeout in milliseconds
+     * @param maxErrors The maximal number of errors before CSVBulkLoader stops processing input
      */
     public static void configureVoltDB(Configuration conf, String [] hostNames,
             String userName, String password, String tableName,
-            int batchSize, long clientTimeOut, int maxErrors, boolean upsert) {
+            int batchSize, long clientTimeOut, int maxErrors) {
 
         configureVoltDB(conf, hostNames, userName, password, tableName);
 
         if (clientTimeOut > 0)   conf.setLong(CLIENT_TIMEOUT_PROP, clientTimeOut);
         if (batchSize > 0)    conf.setInt(BATCHSIZE_PROP, batchSize);
         if (maxErrors > 0)    conf.setInt(BULKLOADER_MAX_ERRORS_PROP, maxErrors);
-        conf.setBoolean(BULKLOADER_UPSERT_PROP, upsert);
     }
 
     /*
@@ -293,8 +289,7 @@ public class VoltConfiguration {
                 conf.get(PASSWORD_PROP),
                 conf.getInt(BATCHSIZE_PROP, BATCHSIZE_DFLT),
                 conf.getLong(CLIENT_TIMEOUT_PROP, TIMEOUT_DFLT),
-                conf.getInt(BULKLOADER_MAX_ERRORS_PROP, FaultCollector.MAXFAULTS),
-                conf.getBoolean(BULKLOADER_UPSERT_PROP, false));
+                conf.getInt(BULKLOADER_MAX_ERRORS_PROP, FaultCollector.MAXFAULTS));
     }
 
     /**
@@ -312,7 +307,7 @@ public class VoltConfiguration {
         Preconditions.checkArgument(
                 hosts != null && hosts.length > 0, "null or empty hosts");
 
-        m_config = new Config(tableName, hosts, userName, password, BATCHSIZE_DFLT, TIMEOUT_DFLT, FaultCollector.MAXFAULTS, false);
+        m_config = new Config(tableName, hosts, userName, password, BATCHSIZE_DFLT, TIMEOUT_DFLT, FaultCollector.MAXFAULTS);
     }
 
     public VoltConfiguration(Config config) {
@@ -430,7 +425,7 @@ public class VoltConfiguration {
         while(loader == null){
             ClientImpl client = getVoltDBClient();
             try {
-                loader = new CSVBulkDataLoader(client, m_config.getTableName(), m_config.getBatchSize(), m_config.isUpsert(), errorHandler);
+                loader = new CSVBulkDataLoader(client, m_config.getTableName(), m_config.getBatchSize(), errorHandler);
             } catch (ProcCallException pe){
                 if(client != null){
                     try {
@@ -478,10 +473,18 @@ public class VoltConfiguration {
         private final int m_batchSize;
         private final long m_clientTimeout;
         private final int m_maxBulkLoaderErrors;
-        private final boolean m_upsert;
 
+        /**
+         * @param tableName destination table name
+         * @param hosts an array of host names
+         * @param userName The user name for client connection
+         * @param password The password  for client connection
+         * @param batchSize The batch size for CSVBulkLoader
+         * @param clientTimeOut The client timeout in milliseconds
+         * @param bulkLoaderMaxErrors The maximal number of errors before CSVBulkLoader stops processing input
+         */
         public Config(String tableName, String[] hosts, String userName, String password,
-                int batchSize, long clientTimeout, int bulkLoaderMaxErrors, boolean upsert){
+                int batchSize, long clientTimeout, int bulkLoaderMaxErrors){
             m_tableName = tableName;
             m_hosts = hosts;
             m_userName = userName;
@@ -489,7 +492,6 @@ public class VoltConfiguration {
             m_batchSize = batchSize;
             m_clientTimeout = clientTimeout;
             m_maxBulkLoaderErrors = bulkLoaderMaxErrors;
-            m_upsert = upsert;
         }
 
         public String getUserName() {
@@ -520,14 +522,11 @@ public class VoltConfiguration {
             return m_maxBulkLoaderErrors;
         }
 
-        public boolean isUpsert() {
-            return m_upsert;
-        }
 
         @Override
         public String toString() {
-            return String.format("Table: %s, User: %s, Password: %s, Servers: %s, Batch Size: %d, Client Timeout: %d, Max errors: %d, upsert: %s.",
-                    m_tableName, m_userName, m_password, Arrays.toString(m_hosts), m_batchSize, m_clientTimeout, m_maxBulkLoaderErrors, Boolean.toString(m_upsert));
+            return String.format("Table: %s, User: %s, Password: %s, Servers: %s, Batch Size: %d, Client Timeout: %d, Max errors: %d.",
+                    m_tableName, m_userName, m_password, Arrays.toString(m_hosts), m_batchSize, m_clientTimeout, m_maxBulkLoaderErrors);
         }
     }
 }

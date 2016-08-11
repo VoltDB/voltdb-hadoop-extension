@@ -59,6 +59,7 @@ public class FaultCollector implements BulkLoaderErrorHandler {
      * rows that are the source of the faults
      *
      * @param adapter to format {@linkplain VoltRecord}
+     * @param maxErrors  The maximal number of errors before CSVBulkLoader stops processing input
      */
     public FaultCollector(TextOutputAdapter adapter, int maxErrors) {
         m_adapter = adapter;
