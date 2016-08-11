@@ -68,7 +68,7 @@ public class VoltOutputFormat extends OutputFormat<Text, VoltRecord> {
             VoltConfiguration conf = new VoltConfiguration(jobConf);
             TextOutputAdapter adapter = new TextOutputAdapter(conf.getTableColumnTypes(),"|");
 
-            m_faultCollector = new FaultCollector(adapter);
+            m_faultCollector = new FaultCollector(adapter, conf.getConfig().getMaxBulkLoaderErrors());
             m_loader = conf.getBulkLoader(m_faultCollector);
         }
 

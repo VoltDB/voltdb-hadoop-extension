@@ -48,7 +48,7 @@ public class VoltOutputFormat implements OutputFormat<Text,VoltRecord> {
             VoltConfiguration conf = new VoltConfiguration(job);
             TextOutputAdapter adapter = new TextOutputAdapter(conf.getTableColumnTypes(),"|");
 
-            m_faultCollector = new FaultCollector(adapter);
+            m_faultCollector = new FaultCollector(adapter, conf.getConfig().getMaxBulkLoaderErrors());
             m_loader = conf.getBulkLoader(m_faultCollector);
         }
 
@@ -77,8 +77,5 @@ public class VoltOutputFormat implements OutputFormat<Text,VoltRecord> {
     @Override
     public void checkOutputSpecs(FileSystem ignored, JobConf job)
             throws IOException {
-        VoltConfiguration conf = new VoltConfiguration(job);
-        conf.isMinimallyConfigured();
     }
-
 }
