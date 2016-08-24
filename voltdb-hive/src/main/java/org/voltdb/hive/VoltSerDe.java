@@ -90,7 +90,7 @@ public class VoltSerDe extends AbstractSerDe {
     public final static String BATCH_SIZE_PROP = "voltdb.batchSize";
     public final static String CLIENT_TIMEOUT_PROP = "voltdb.clientTimeout";
     public final static String MAX_ERRORS_PROP = "voltdb.maxErrors";
-
+    public final static String UPSERT_PROP = "voltdb.upsert";
 
     private final Splitter m_splitter = Splitter.on(",").trimResults().omitEmptyStrings();
     private VoltObjectInspectorGenerator m_oig;
@@ -127,6 +127,7 @@ public class VoltSerDe extends AbstractSerDe {
      * <li>{@code voltdb.batchSize} (optional) VoltDB BulkLoader batch size</li>
      * <li>{@code voltdb.clientTimeout} (optional) VoltDB client timeout</li>
      * <li>{@code voltdb.maxErrors} (optional) VoltDB BulkLoader max errors</li>
+     * <li>{@code voltdb.upsert} (optional) VoltDB BulkLoader upsert mode</li>
      * </ul>
      * <p>
      * and makes sure that the Hive table column types match the destination
@@ -191,7 +192,8 @@ public class VoltSerDe extends AbstractSerDe {
             }
         }
 
-        VoltConfiguration.Config config = new VoltConfiguration.Config(table, servers, user, password, batchSize, timeout, maxErrors);
+        boolean upsert = "true".equalsIgnoreCase(props.getProperty(UPSERT_PROP, "false"));
+        VoltConfiguration.Config config = new VoltConfiguration.Config(table, servers, user, password, batchSize, timeout, maxErrors, upsert);
         VoltType [] voltTypes = null;
         m_voltConf = new VoltConfiguration(config);
         try {
