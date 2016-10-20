@@ -193,6 +193,11 @@ public class VoltSerDe extends AbstractSerDe {
         }
 
         boolean upsert = "true".equalsIgnoreCase(props.getProperty(UPSERT_PROP, "false"));
+
+        if (conf != null) {
+            VoltConfiguration.configureVoltDB(conf, servers, user, password, table, batchSize, timeout, maxErrors,  upsert);
+        }
+
         VoltConfiguration.Config config = new VoltConfiguration.Config(table, servers, user, password, batchSize, timeout, maxErrors, upsert);
         VoltType [] voltTypes = null;
         m_voltConf = new VoltConfiguration(config);

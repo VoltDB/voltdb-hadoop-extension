@@ -288,14 +288,14 @@ public class VoltConfiguration {
      * @param conf job configuration
      */
     public VoltConfiguration(Configuration conf) {
-        m_config = new Config(conf.get(TABLENAME_PROP),
+        this( new Config(conf.get(TABLENAME_PROP),
                 conf.getStrings(HOSTNAMES_PROP, new String[]{}),
                 conf.get(USERNAME_PROP),
                 conf.get(PASSWORD_PROP),
                 conf.getInt(BATCHSIZE_PROP, BATCHSIZE_DFLT),
                 conf.getLong(CLIENT_TIMEOUT_PROP, TIMEOUT_DFLT),
                 conf.getInt(BULKLOADER_MAX_ERRORS_PROP, FaultCollector.MAXFAULTS),
-                conf.getBoolean(BULKLOADER_UPSERT_PROP, false));
+                conf.getBoolean(BULKLOADER_UPSERT_PROP, false)));
     }
 
     /**
